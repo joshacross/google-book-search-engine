@@ -8,7 +8,7 @@ const resolvers = {
             if (context.user) {
                 const userData = await User.findOne({})
                 .select('__v password')
-                .populate('books');
+                // .populate('books');
 
                 return userData;
             }
@@ -18,7 +18,7 @@ const resolvers = {
         users: async () => {
             return User.find()
             .select('-__v -password')
-            .populate('books');
+            // .populate('books');
         },
         books: async (parent, { username }) => {
             const params = username ? { username } : {};
@@ -45,17 +45,33 @@ const resolvers = {
         },
         saveBook: async (parent, args, context) => {
             if (context.user) {
-                const book = await Book.create({ ...args, username: context.user.username});
+                // const book = await Book.create({ ...args, username: context.user.username});
 
-                await User.findByIdAndUpdate(
+                const savedBook = await User.findByIdAndUpdate(
                     { _id: context.user._id },
-                    { $push: { books: book.bookId }},
+                    { $addToSet: { savedBooks:args }},
                     { new: true}
                 );
 
-                return thought;
+                return savedBook;
             }
 
+            throw new AuthenticationError('Please login');
+        },
+        deleteBook: async (parent, { bookId }, context) => {
+            if (context.user) {
+                const savedBook = await User.findByIdandUpdate(
+                    { _id: context.user._id },
+                    {
+                        $pull: {
+                            savedBooks: { bookId: bookId }
+                        }
+                    },
+                    { new: true }
+                ).populate('books');
+
+                return savedBook;
+            }
             throw new AuthenticationError('Please login');
         }
     }
